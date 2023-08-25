@@ -9,7 +9,8 @@
 1. `git clone https://github.com/lqxhub/sensitive-words-filter.git`
 2. `cd sensitive-words-filter`
 3. `go build`
-4. 使用浏览器打开 127.0.01:8081 这个地址
+4. 运行 sensitive-words-filter
+5. 使用浏览器打开 127.0.01:8081 这个地址
 
 在输入框里输入要检查的词就可以进行检查了
 

@@ -11,7 +11,8 @@ Steps to use:
 1. `git clone https://github.com/lqxhub/sensitive-words-filter.git`
 2. `cd sensitive-words-filter`
 3. `go build`
-4. Open the address 127.0.0.1:8081 in a web browser.
+4. run sensitive-words-filter
+5. Open the address 127.0.0.1:8081 in a web browser.
 
 Input the words to check in the input box to perform detection.
 
