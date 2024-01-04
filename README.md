@@ -9,10 +9,10 @@ The sensitive word detection uses an HTTP server to receive input and then perfo
 Steps to use:
 
 1. `git clone https://github.com/lqxhub/sensitive-words-filter.git`
-2. `cd sensitive-words-filter`
+2. `cd sensitive-words-filter/example`
 3. `go build`
-4. run sensitive-words-filter
-5. Open the address 127.0.0.1:8081 in a web browser.
+4. run example
+5. open the address 127.0.0.1:8081 in a web browser.
 
 Input the words to check in the input box to perform detection.
 

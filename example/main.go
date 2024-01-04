@@ -5,6 +5,7 @@ import (
 	"container/list"
 	"encoding/json"
 	"fmt"
+	"github.com/lqxhub/sensitive_words_filter"
 	"io"
 	"net/http"
 	"os"
@@ -14,10 +15,10 @@ import (
 
 const HttpAddress = ":8081"
 
-var dfaManager *DfaManager
+var dfaManager *sensitive_word_filter_filter.SensitiveWordManager
 
 func NewDfa() error {
-	dfaManager = NewDfaManager()
+	dfaManager = sensitive_word_filter_filter.NewSensitiveWordManager()
 
 	//read rule from txt file
 	file, err := os.OpenFile("./rule.txt", os.O_RDWR, 0666)
@@ -75,7 +76,7 @@ func checkWord(w http.ResponseWriter, r *http.Request) {
 		resp.Code = 3
 		resp.Msg = "参数错误"
 	} else {
-		if dfaManager.Check(word) {
+		if dfaManager.HasSensitiveWords(word) {
 			resp.Code = 2
 			resp.Msg = fmt.Sprintf("`%s` 有敏感词", word)
 		} else {

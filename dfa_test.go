@@ -1,64 +1,91 @@
-package main
+package sensitive_word_filter_filter
 
 import (
 	"math/rand"
 	"testing"
 )
 
-func BenchmarkDfaManager_Check(b *testing.B) {
-	_ = NewDfa()
+const words_rule_file = "./example/rule.txt"
+
+func TestSensitiveWordManager_Check(t *testing.T) {
+	dfaManager, err := InitSensitiveWordWithFile(words_rule_file)
+	if err != nil {
+		panic(err)
+	}
+
+	//要屏蔽的词
 	strs := []string{
-		"你好你好你好你好,你!好你好你--好你好你好你好你好你好你好你好你////好你好你好你好你好你好你好你好你好你好你好你好你好你好你好你好你好你好你好你好***你好你好",
-		"正红!@#@#$@$@$丹红丹红丹红丹常",
 		"粿聊",
-		"粿聊",
-		"哈萨",
-		"铪粉",
-		"蛤蟆",
-		"還權",
 		"含屌",
-		"含~~~~~~~~~~~~~~进含~~~~~~~~~~~~~~进含~~~~~~~~~~~~~~进含~~~~~~~~~~~~~~进含~~~~~~~~~~~~~~进",
-		"含着",
-		"含住",
-		"韩正",
-		"韓正",
-		"汉刀",
+		"含~~~~~~~~~~~~~~进",
+		"含--着",
 		"漢奸",
 		"豪乳",
-		"好12333333333332313123紧",
+		"豪&&乳",
+		"好---紧",
 		"好嫩",
-		"河殇",
-		"河殤",
-		"荷治",
-		"贺龙",
-		"賀龍",
-		"黑1111111111113343434$$$$$***1111111屄",
+		"好!!嫩",
+		"黑111111111111$$$$$***1111111屄",
 		"黑逼",
-		"黑彩红丹红丹红丹",
-		"黑卡红丹红丹红丹红丹",
-		"嗨壶红丹红丹红丹",
-		"狠肏红丹红丹红丹红丹",
-		"红丹红丹红丹红丹红丹红丹",
-		"红会",
-		"红@#@#@#$$%#@$磷",
-		"洪傳",
-		"洪法",
-		"洪兴",
-		"洪興",
-		"洪23/---@#RTYU***#$%^&*()吟",
-		"洪志",
 		"后庭",
-		"后握",
-		"豞粮",
-		"狐@#@@$$fsdfsdfsf媚",
-		"胡瘟",
-		"虎门",
-		"虎骑",
+		"后--庭",
+		"狐@#@@$$媚",
 		"互fsdfsf12#$%^&*()淫",
-		"护照",
+		"bz176.com",
+	}
+
+	for _, str := range strs {
+		if !dfaManager.HasSensitiveWords(str) {
+			t.Fatalf("dfaManager.Check(%s) failed", str)
+		}
+	}
+
+	//不屏蔽的词
+	strs = []string{
+		"你好",
+		"早上好",
+		"打副本",
+		"加我好友",
+		"文档",
+		"百度",
+		"特斯拉",
+		"马斯克",
+	}
+
+	for _, str := range strs {
+		if dfaManager.HasSensitiveWords(str) {
+			t.Fatalf("dfaManager.Check(%s) failed", str)
+		}
+	}
+
+}
+
+func BenchmarkDfaManager_Check(b *testing.B) {
+	dfaManager, err := InitSensitiveWordWithFile(words_rule_file)
+	if err != nil {
+		panic(err)
+	}
+	strs := []string{
+		"粿聊",
+		"含屌",
+		"含~~~~~~~~~~~~~~进",
+		"含--着",
+		"漢奸",
+		"豪乳",
+		"豪&&乳",
+		"好---紧",
+		"好嫩",
+		"好!!嫩",
+		"黑111111111111$$$$$***1111111屄",
+		"黑逼",
+		"后庭",
+		"后--庭",
+		"狐@#@@$$媚",
+		"互fsdfsf12#$%^&*()淫",
+		"bz176.com",
 	}
 	n := len(strs)
 	for i := 0; i < b.N; i++ {
-		dfaManager.Check(strs[rand.Intn(n)])
+		dfaManager.HasSensitiveWords(strs[rand.Intn(n)])
 	}
 }

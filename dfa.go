@@ -1,55 +1,89 @@
-package main
+//敏感词检测
+
+package sensitive_word_filter_filter
 
 import (
+	"bufio"
+	"bytes"
 	"container/list"
+	"fmt"
+	"io"
+	"os"
 	"unicode"
 )
 
-func NewDfaManager() *DfaManager {
-	dm := &DfaManager{}
-	return dm
+//根据文件初始化 敏感词监测
+func InitSensitiveWordWithFile(filePath string) (*SensitiveWordManager, error) {
+	file, err := os.OpenFile(filePath, os.O_RDONLY, 0666)
+	if err != nil {
+		return nil, err
+	}
+	sw := NewSensitiveWordManager()
+
+	reader := bufio.NewReader(file)
+	for {
+		if line, _, err := reader.ReadLine(); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, fmt.Errorf("read file error:%s", err.Error())
+		} else {
+			sw.buildTree(string(bytes.TrimFunc(line, func(r rune) bool { //去掉不可见字符
+				return !unicode.IsPrint(r)
+			})))
+		}
+	}
+	return sw, nil
+
 }
 
-type DfaManager struct {
-	root map[string]*DfaNode
+func NewSensitiveWordManager() *SensitiveWordManager {
+	sw := &SensitiveWordManager{
+		root: make(map[rune]*SensitiveWordNode),
+	}
+	return sw
 }
 
-//initialize the dfa
-func (dm *DfaManager) init() {
-	dm.root = make(map[string]*DfaNode)
+func NewSensitiveWordManagerWithList(sentences *list.List) *SensitiveWordManager {
+	sw := &SensitiveWordManager{
+		root: make(map[rune]*SensitiveWordNode, sentences.Len()),
+	}
+	sw.InitWordTree(sentences)
+	return sw
 }
 
-func (dm *DfaManager) InitWordTree(sentences *list.List) {
-	dm.init()
+type SensitiveWordManager struct {
+	root map[rune]*SensitiveWordNode
+}
+
+func (dm *SensitiveWordManager) InitWordTree(sentences *list.List) {
 	for v := sentences.Front(); v != nil; v = v.Next() {
 		dm.buildTree(v.Value.(string))
 	}
 }
 
-func (dm *DfaManager) InitWordTreeSlice(sentences []string) {
-	dm.init()
+func (dm *SensitiveWordManager) InitWordTreeSlice(sentences []string) {
 	for _, sentence := range sentences {
 		dm.buildTree(sentence)
 	}
 }
 
-//add a filter rule
-func (dm *DfaManager) buildTree(sentence string) {
-	var node *DfaNode
+func (dm *SensitiveWordManager) buildTree(sentence string) {
+	var node *SensitiveWordNode
 	runeSentence := []rune(sentence)
 	for i, v := range runeSentence {
-		node = dm.buildNode(node, string(v))
+		node = dm.buildNode(node, v)
 		if i == len(runeSentence)-1 { //这个词结束
 			node.eof = true
 		}
 	}
 }
 
-func (dm *DfaManager) buildNode(node *DfaNode, word string) *DfaNode {
+func (dm *SensitiveWordManager) buildNode(node *SensitiveWordNode, word rune) *SensitiveWordNode {
 	if node == nil {
 		node = dm.root[word]
 		if node == nil {
-			node = &DfaNode{}
+			node = &SensitiveWordNode{}
 			dm.root[word] = node
 		}
 	} else {
@@ -59,21 +93,28 @@ func (dm *DfaManager) buildNode(node *DfaNode, word string) *DfaNode {
 	return node
 }
 
-//do check
-func (dm *DfaManager) Check(str string) bool {
-	_str := make([]rune, 0, len(str))
-	for _, v := range str {
-		if unicode.Is(unicode.Han, v) || unicode.IsLetter(v) {
-			_str = append(_str, v)
-		}
-	}
+//检查是否含有敏感词
+func (dm *SensitiveWordManager) HasSensitiveWords(str string) bool {
+	_str := []rune(str)
 	for i := 0; i < len(_str); i++ {
-		var node *DfaNode
+		var node *SensitiveWordNode
 		for _, v := range _str[i:] {
-			if node == nil {
-				node = dm.root[string(v)]
-			} else {
-				node = node.next(string(v))
+			isSymbol := false
+			if unicode.IsPunct(v) || unicode.IsSymbol(v) {
+				isSymbol = true
+			}
+			if node == nil { //第一个字符
+				node = dm.root[v]
+			} else { //后面的字符
+				_node := node.next(v)
+				if _node == nil && isSymbol {
+					//如果没有找到,并且是标点符号,则跳过标点符号检查
+					//这里是为了防止标点符号被当做敏感词
+					//例如: '曹--尼,,玛' 这里的`-`和`,`都会被跳过
+					// www.baidu.com 这里的 `.` 也是敏感词的一部分,也会被检查出来
+					continue
+				}
+				node = _node
 			}
 			if node == nil {
 				break
@@ -86,23 +127,23 @@ func (dm *DfaManager) Check(str string) bool {
 	return false
 }
 
-// DfaNode ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-type DfaNode struct {
+// SensitiveWordNode ///////////////////////////////////////////////////////////////////////////////////////////////////
+type SensitiveWordNode struct {
 	eof   bool
-	next_ map[string]*DfaNode
+	next_ map[rune]*SensitiveWordNode
 }
 
-func (dn *DfaNode) next(word string) *DfaNode {
+func (dn *SensitiveWordNode) next(word rune) *SensitiveWordNode {
 	return dn.next_[word]
 }
 
-func (dn *DfaNode) insertNode(word string) *DfaNode {
+func (dn *SensitiveWordNode) insertNode(word rune) *SensitiveWordNode {
 	if dn.next_ == nil {
-		dn.next_ = make(map[string]*DfaNode)
+		dn.next_ = make(map[rune]*SensitiveWordNode)
 	}
 	node := dn.next_[word]
 	if node == nil {
-		node = &DfaNode{}
+		node = &SensitiveWordNode{}
 		dn.next_[word] = node
 	}
 	return node
